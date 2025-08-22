@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
-import { ElevenLabsClient, OutputFormat } from "@elevenlabs/elevenlabs-js";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import {playReadableStreamAudio, speakText} from "./ElevenlabsAPI";
 
 const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
 const voiceId = "JBFqnCBsd6RMkjVDRZzb"; // Rachel's voice
@@ -10,6 +11,7 @@ function InputBar() {
   const [listening, setListening] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const silenceTimeoutRef = useRef(null);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -17,23 +19,17 @@ function InputBar() {
     mediaRecorderRef.current = mediaRecorder;
     audioChunksRef.current = [];
 
-    mediaRecorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
 
     mediaRecorder.onstop = async () => {
-      // check if we actually recorded anything
-      if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
+      if (!audioChunksRef.current.length) {
         console.warn("No audio recorded.");
         return;
       }
 
       const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-
-      console.log(blob);
-      
-
-      // optional local preview (to check if blob works)
-      // const audio = new Audio(URL.createObjectURL(blob));
-      // audio.play();
 
       const formData = new FormData();
       formData.append("audio", blob, `${Date.now()}.webm`);
@@ -47,87 +43,70 @@ function InputBar() {
 
         const data = await res.json();
         setMessage(data.text);
-        speakText(data.text); // TTS
+
+        // Bot speaks → when finished → start recording again
+        await speakText(data.text);
+        startRecording();
       } catch (err) {
         console.error("Error uploading audio:", err);
       }
     };
 
+    // Silence detection
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    source.connect(analyser);
+    const dataArray = new Uint8Array(analyser.fftSize);
+
+    const detectSilence = () => {
+      analyser.getByteTimeDomainData(dataArray);
+      const isSilent = dataArray.every((val) => Math.abs(val - 128) < 5);
+
+      if (isSilent) {
+        if (!silenceTimeoutRef.current) {
+          silenceTimeoutRef.current = setTimeout(() => {
+            stopRecording();
+            silenceTimeoutRef.current = null;
+          }, 1500); // 1.5s silence = stop
+        }
+      } else {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
+
+      if (mediaRecorder.state === "recording") {
+        requestAnimationFrame(detectSilence);
+      }
+    };
+
     mediaRecorder.start();
     setListening(true);
+    detectSilence();
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
     setListening(false);
   };
 
-  async function playReadableStreamAudio(
-    readableStream,
-    mimeType = "audio/mpeg"
-  ) {
-    // 1️⃣ Get a reader for the stream
-    const reader = readableStream.getReader();
-    const chunks = [];
-
-    // 2️⃣ Read chunks until done
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-
-    // 3️⃣ Merge chunks into a single Uint8Array
-    const audioData = new Uint8Array(
-      chunks.reduce((acc, chunk) => [...acc, ...chunk], [])
-    );
-
-    // 4️⃣ Create a Blob and an object URL
-    const blob = new Blob([audioData], { type: mimeType });
-    const audioUrl = URL.createObjectURL(blob);
-
-    // 5️⃣ Play using the HTMLAudioElement API
-    const audio = new Audio(audioUrl);
-    await audio.play();
-  }
-
-
-  const speakText = async (text) => {
-    try {
-      const elevenlabs = new ElevenLabsClient({ apiKey });
-
-      // Get MP3 output (easy for browsers to handle)
-      const audioData = await elevenlabs.textToSpeech.convert(voiceId, {
-        text,
-        model_id: "eleven_multilingual_v2",
-        output_format: "mp3_44100_128",
-      });
-      console.log("Audio data:", audioData);
-      await playReadableStreamAudio(audioData);
-  }
   
-  catch (error) {
-      console.error("Error:", error);
-  }
-  };
 
-
-
-
-
-  const sendMessage = (msg) => {
+  const sendMessage = async (msg) => {
     if (!msg.trim()) return;
-    console.log("User message:", msg);
     setMessage("");
-    speakText(msg);
+    await speakText(msg);
   };
 
   return (
     <>
-      {/* Main input bar */}
       <div className="fixed flex justify-center bottom-4 inset-x-0 px-2">
         <div className="bg-blue-300 rounded-3xl w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2 flex items-center gap-2 shadow-lg">
-          {/* Input box */}
           <form
             className="flex-grow"
             onSubmit={(e) => {
@@ -140,12 +119,11 @@ function InputBar() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type here"
-              className=" w-full px-3 py-2 rounded-full focus:outline-none text-sm sm:text-base "
+              className="w-full px-3 py-2 rounded-full focus:outline-none text-sm sm:text-base"
               disabled={listening}
             />
           </form>
 
-          {/* Send / Mic button */}
           {message.trim() ? (
             <button
               onClick={() => sendMessage(message)}
@@ -164,7 +142,6 @@ function InputBar() {
         </div>
       </div>
 
-      {/* Pulsing circle overlay while recording */}
       {listening && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="w-64 h-64 md:w-72 md:h-72 rounded-full bg-blue-400 opacity-50 animate-pulse"></div>
