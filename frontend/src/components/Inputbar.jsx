@@ -1,10 +1,6 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import {playReadableStreamAudio, speakText} from "./ElevenlabsAPI";
-
-const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-const voiceId = "JBFqnCBsd6RMkjVDRZzb"; // Rachel's voice
+import {speakText} from "./ElevenlabsAPI";
 
 function InputBar() {
   const [message, setMessage] = useState("");
