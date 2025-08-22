@@ -1,4 +1,5 @@
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { ElevenLabsClient } from "elevenlabs";
+
 const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
 const voiceId = "JBFqnCBsd6RMkjVDRZzb"; // Rachel's voice
 
@@ -15,9 +16,8 @@ export async function playReadableStreamAudio(
       chunks.push(value);
     }
 
-    const audioData = new Uint8Array(chunks.flat());
-    const blob = new Blob([audioData], { type: mimeType });
-    const audioUrl = URL.createObjectURL(blob);
+    const audioData = new Blob(chunks, { type: mimeType });
+    const audioUrl = URL.createObjectURL(audioData);
 
     return new Promise((resolve) => {
       const audio = new Audio(audioUrl);

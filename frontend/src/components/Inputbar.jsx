@@ -1,8 +1,6 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
-
-import {playReadableStreamAudio, speakText} from "./ElevenlabsAPI";
-
+import {speakText} from "./ElevenlabsAPI";
 
 
 function InputBar() {
