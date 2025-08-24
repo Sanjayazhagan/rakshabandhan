@@ -1,10 +1,7 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import {playReadableStreamAudio, speakText} from "./ElevenlabsAPI";
-
-const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-const voiceId = "JBFqnCBsd6RMkjVDRZzb"; // Rachel's voice
+import {speakText} from "./ElevenlabsAPI";
+import { useSendMessageMutation } from "../store";
 
 function InputBar() {
   const [message, setMessage] = useState("");
@@ -12,6 +9,8 @@ function InputBar() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const silenceTimeoutRef = useRef(null);
+  
+  const [sendMessageMutation, { data, error, isLoading }] = useSendMessageMutation();
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -100,7 +99,15 @@ function InputBar() {
   const sendMessage = async (msg) => {
     if (!msg.trim()) return;
     setMessage("");
-    await speakText(msg);
+    const test={groupid:1,prompt:msg};
+    try {
+            const response= await sendMessageMutation(test).unwrap();
+            setMessage('');
+            console.log('Message sent:', response.data);
+            await speakText(response.data);
+        } catch (err) {
+            console.error('Failed to send message:', err);
+        }
   };
 
   return (
