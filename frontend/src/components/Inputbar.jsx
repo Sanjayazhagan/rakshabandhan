@@ -102,7 +102,7 @@ function InputBar() {
 
   return (
     <>
-      <div className="fixed flex justify-center bottom-4 inset-x-0 px-2">
+      <div className="fixed flex justify-center bottom-4 inset-x-0 px-2 w-full">
         <div className="bg-blue-300 rounded-3xl w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2 flex items-center gap-2 shadow-lg">
           <form
             className="flex-grow"
