@@ -1,6 +1,7 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
-import {speakText} from "./ElevenlabsAPI";
+import { speakText } from "./ElevenlabsAPI";
+import { useSendMessageMutation, useSendAudioMutation } from "../store";
 
 
 function InputBar() {
@@ -9,80 +10,91 @@ function InputBar() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const silenceTimeoutRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const streamRef = useRef(null);
+  const analyserRef = useRef(null);
+
+  const [sendMessageMutation] = useSendMessageMutation();
+  const [sendAudioMutation] = useSendAudioMutation();
 
   const startRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = mediaRecorder;
-    audioChunksRef.current = [];
+    if (listening) return;
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-    mediaRecorder.onstop = async () => {
-      if (!audioChunksRef.current.length) {
-        console.warn("No audio recorded.");
-        return;
-      }
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
 
-      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-
-      const formData = new FormData();
-      formData.append("audio", blob, `${Date.now()}.webm`);
-
-      try {
-        const res = await fetch("/api/upload-audio", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) throw new Error("Upload failed");
-
-        const data = await res.json();
-        setMessage(data.text);
-
-        // Bot speaks → when finished → start recording again
-        await speakText(data.text);
-        startRecording();
-      } catch (err) {
-        console.error("Error uploading audio:", err);
-      }
-    };
-
-    // Silence detection
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
-    source.connect(analyser);
-    const dataArray = new Uint8Array(analyser.fftSize);
-
-    const detectSilence = () => {
-      analyser.getByteTimeDomainData(dataArray);
-      const isSilent = dataArray.every((val) => Math.abs(val - 128) < 5);
-
-      if (isSilent) {
-        if (!silenceTimeoutRef.current) {
-          silenceTimeoutRef.current = setTimeout(() => {
-            stopRecording();
-            silenceTimeoutRef.current = null;
-          }, 1500); // 1.5s silence = stop
+      mediaRecorder.onstop = async () => {
+        if (!audioChunksRef.current.length) {
+          console.warn("No audio recorded.");
+          return;
         }
-      } else {
-        clearTimeout(silenceTimeoutRef.current);
-        silenceTimeoutRef.current = null;
-      }
 
-      if (mediaRecorder.state === "recording") {
-        requestAnimationFrame(detectSilence);
-      }
-    };
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const formData = new FormData();
+        formData.append("audio", blob, `${Date.now()}.webm`);
+        formData.append("groupid", 1); 
+        try {
+          console.log("Audio Blob:",formData);
+          const response = await sendAudioMutation(formData).unwrap();
+          setMessage('');
+          console.log('Audio message sent:', response.data);
+          await speakText(response.data);
+        } catch (err) {
+          console.error('Failed to send audio:', err);
+        }
+      };
 
-    mediaRecorder.start();
-    setListening(true);
-    detectSilence();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyserRef.current = analyser;
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.fftSize);
+      const detectSilence = () => {
+        analyser.getByteTimeDomainData(dataArray);
+        console.log("Recording started");
+
+        const sum = dataArray.reduce((acc, val) => acc + Math.abs(val - 128), 0);
+        const averageAmplitude = sum / dataArray.length;
+        const silenceThreshold = 10;
+
+        if (averageAmplitude < silenceThreshold) {
+          if (!silenceTimeoutRef.current) {
+            silenceTimeoutRef.current = setTimeout(() => {
+              stopRecording();
+            }, 1500);
+          }
+        } else {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
+
+        if (mediaRecorder.state === "recording") {
+          requestAnimationFrame(detectSilence);
+        }
+      };
+
+      mediaRecorder.start();
+      setListening(true);
+      detectSilence();
+
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      setListening(false);
+    }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async() => {
     if (
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state === "recording"
@@ -90,15 +102,41 @@ function InputBar() {
       mediaRecorderRef.current.stop();
     }
     setListening(false);
+    console.log("Recording stopped");
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    // A simple check to ensure the context is not already closed
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      await audioContextRef.current.close();
+      console.log('AudioContext closed successfully');
+    }
+    
+    clearTimeout(silenceTimeoutRef.current);
+    silenceTimeoutRef.current = null;
   };
-
-  
 
   const sendMessage = async (msg) => {
     if (!msg.trim()) return;
     setMessage("");
-    await speakText(msg);
+    const test = { groupid: 1, prompt: msg };
+    try {
+      const response = await sendMessageMutation(test).unwrap();
+      setMessage('');
+      console.log('Message sent:', response.data);
+      await speakText(response.data);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      stopRecording(); // Cleanup on unmount
+    };
+  }, []);
 
   return (
     <>

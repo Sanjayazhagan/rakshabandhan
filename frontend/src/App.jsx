@@ -1,7 +1,8 @@
+
 import InputBar from './components/inputbar'
 import ChatWindow from './components/Chatwindow'
-
-
+import { FaMicrophone } from "react-icons/fa";
+import InputBar from "./components/Inputbar";
 function App() {
 
   const chatData = [
@@ -46,6 +47,8 @@ function App() {
           <InputBar />
         </div>
       </div>
+    <div>
+      <InputBar />  
     </div>
   );
 }
