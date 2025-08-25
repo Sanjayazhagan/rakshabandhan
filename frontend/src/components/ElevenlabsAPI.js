@@ -2,6 +2,7 @@ import { ElevenLabsClient } from "elevenlabs";
 
 const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
 const voiceId = "JBFqnCBsd6RMkjVDRZzb"; // Rachel's voice
+
 export async function playReadableStreamAudio(
     readableStream,
     mimeType = "audio/mpeg"
