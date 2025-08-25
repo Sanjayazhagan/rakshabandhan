@@ -2,3 +2,4 @@
 sqlUrl.py
 /data/
 /venv/
+/chroma_langchain_db/

@@ -1,8 +1,10 @@
 from typing import Union
 from pydantic import BaseModel
-from fastapi import FastAPI, Request, Depends
+from pydantic import Field
+from fastapi import FastAPI, Request, Depends,UploadFile,File,Form
 from rag import load_and_process_docs
 from llmWrap import finalize_response
+from audiototext import audio_to_text
 import asyncio
 from database import SessionLocal, Base, engine
 from model import users, chatgroups, chats
@@ -25,6 +27,9 @@ class PromptInput(BaseModel):
     groupid: int
     prompt: str
 
+class AudioRequest(BaseModel):
+    groupid: int
+    audio: bytes 
 
 app = FastAPI()
 
@@ -56,6 +61,28 @@ def prompt(request: PromptInput, db: Session = Depends(get_db)):
     db.add(chats(user_id=1, chatgroup_id=request.groupid, question=request.prompt, answer=response))
     db.commit()
     return {"data": response}
+@app.post("/chat/audio")
+async def audio_prompt(
+    groupid: int = Form(...),
+    audio: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    if not audio.file:
+        return {"error": "No audio provided"}
+    
+    # Read the audio file's content as bytes
+    audio_bytes = await audio.read()
+    audio_mime_type = audio.content_type
+
+    # Corrected function call: Use 'await' instead of 'asyncio.run'
+    question = await audio_to_text(audio_bytes, audio_mime_type)
+    response = await finalize_response(question)
+    
+    db.add(chats(user_id=1, chatgroup_id=groupid, question=question, answer=response))
+    db.commit()
+    
+    return {"data": response}
+
 @app.get("/groups")
 def get_groups(db: Session = Depends(get_db)):
     groups = db.add(chatgroups(user_id=1))

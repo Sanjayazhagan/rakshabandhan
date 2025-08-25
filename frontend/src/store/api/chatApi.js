@@ -28,10 +28,7 @@ const chatApi = createApi({
                 return {
                     url: '/chat/audio',
                     method: 'POST',
-                    body: {
-                        groupid: audio.groupid,
-                        audio: audio.file
-                    },
+                    body: audio,
                 };
             },
         }),
