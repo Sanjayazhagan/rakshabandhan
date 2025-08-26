@@ -16,9 +16,9 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen justify-center items-center">
+    <div className="flex flex-col overflow-y-auto h-screen justify-center items-center">
       {/* Scrollable chat window */}
-      <div className="flex-1 overflow-y-auto bg-white flex justify-center ">
+      <div className="flex-1  bg-white flex justify-center ">
         <div className="w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2">
           <ChatWindow chatData={chatData} />
         </div>
