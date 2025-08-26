@@ -1,39 +1,22 @@
-
-import InputBar from './components/inputbar'
 import ChatWindow from './components/Chatwindow'
 import { FaMicrophone } from "react-icons/fa";
 import InputBar from "./components/Inputbar";
+import { useFetchChatQuery } from './store';
+import { useState } from 'react';
 function App() {
-
-  const chatData = [
-    { question: "What is your name?", answer: "keerthivasan" },
-    { question: "What is your age?", answer: "23" },
-    {
-      question: "What is your favorite color?",
-      answer:
-        "blue What is your favorite book? What is your favorite book? What is your favorite book? vWhat is your favorite book?What is your favorite book?What is your favorite book?",
-    },
-    { question: "What is your favorite food?", answer: "pizza" },
-    {
-      question: "What is your favorite movie?",
-      answer: "The Shawshank Redemption",
-    },
-    {
-      question: "What is your favorite book?",
-      answer: "To Kill a Mockingbird",
-    },
-    { question: "What is your favorite sport?", answer: "Soccer" },
-    { question: "What is your favorite animal?", answer: "Dog" },
-    { question: "What is your favorite color?", answer: "Blue" },
-    { question: "What is your favorite color?", answer: "Blue" },
-    { question: "What is your favorite color?", answer: "Blue" },
-    { question: "What is your favorite color?", answer: "Blue" },
-    { question: "What is your favorite color?", answer: "Blue" },
-    { question: "What is your favorite sport?", answer: "Soccer" },
-  ];
+  const {data ,isLoading,error} = useFetchChatQuery(1);
+  console.log("Fetched chat data:", data);
+  const [chatData, setChatData] = useState([]);
+  if (error) {
+    console.error("Error fetching chat data:", error);
+  }
+  if (!isLoading && data && data.data) !chatData.length && setChatData(data.data);
+  const handleAddMessage = (message) => {
+    setChatData((chatData) => [...chatData, message]);
+  };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen justify-center items-center">
       {/* Scrollable chat window */}
       <div className="flex-1 overflow-y-auto bg-white flex justify-center ">
         <div className="w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2">
@@ -42,15 +25,13 @@ function App() {
       </div>
 
       {/* Fixed input bar */}
-      <div className="flex justify-center bg-white p-2">
-        <div className="w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw]">
-          <InputBar />
+      <div className="flex justify-center w-full bg-white">
+        <div className="z-10 bg-white flex">
+          <InputBar onSendMessage={handleAddMessage} />
         </div>
       </div>
-    <div>
-      <InputBar />  
-    </div>
+  </div>
   );
 }
 
-export default App
+export default App;

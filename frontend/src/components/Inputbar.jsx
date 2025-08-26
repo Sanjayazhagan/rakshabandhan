@@ -139,8 +139,8 @@ function InputBar() {
   }, []);
 
   return (
-    <>
-      <div className="fixed flex justify-center bottom-4 inset-x-0 px-2 w-full">
+    <><div className="fixed w-full flex justify-center bottom-0 left-0 right-0 inset-x-0  ">
+      <div className=" w-full z-10 bg-white rounded-t-3xl pb-5 sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw]">
         <div className="bg-blue-300 rounded-3xl w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2 flex items-center gap-2 shadow-lg">
           <form
             className="flex-grow"
@@ -182,6 +182,7 @@ function InputBar() {
           <div className="w-64 h-64 md:w-72 md:h-72 rounded-full bg-blue-400 opacity-50 animate-pulse"></div>
         </div>
       )}
+      </div>
     </>
   );
 }

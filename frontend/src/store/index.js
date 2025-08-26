@@ -14,5 +14,5 @@ const store = configureStore({
 setupListeners(store.dispatch);
 
 export { useSendMessageMutation, useSendAudioMutation } from "./api/chatApi";
-export { useFetchNewGroupQuery } from "./api/groupApi";
+export { useFetchNewGroupQuery,useFetchChatQuery } from "./api/groupApi";
 export default store;

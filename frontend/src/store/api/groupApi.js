@@ -16,9 +16,17 @@ const groupApi = createApi({
           };
         },
       }),
+      fetchChat: builder.query({
+        query: (id) => {
+          return {
+            url: `/groups/${id}`,
+            method: 'GET',
+          };
+        },
+      }),
     }
   }
 });
 
-export const { useFetchNewGroupQuery } = groupApi;
+export const { useFetchNewGroupQuery, useFetchChatQuery } = groupApi;
 export { groupApi };

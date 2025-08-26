@@ -83,6 +83,14 @@ async def audio_prompt(
     
     return {"data": response}
 
+@app.get("/groups/{group_id}")
+def get_group(group_id: int, db: Session = Depends(get_db)):
+    group = db.query(chats.question,chats.answer).filter(chats.chatgroup_id == group_id).all()
+    dict_group = [ {"question": q, "answer": a} for q, a in group ]
+    if not dict_group:
+        return {"error": "Group not found"}
+    return {"data": dict_group}
+
 @app.get("/groups")
 def get_groups(db: Session = Depends(get_db)):
     groups = db.add(chatgroups(user_id=1))
