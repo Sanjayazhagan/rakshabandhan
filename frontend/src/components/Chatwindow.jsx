@@ -3,7 +3,7 @@ import QuestionBubble from "./Questionchatbubble";
 
 export default function ChatWindow({ chatData }) {
   return (
-    <div className="flex-1 overflow-y-auto w-full pb-20">
+    <div className="flex-1 overflow-y-auto w-full pb-20 bg-gray-950">
       {chatData.length === 0 ? (
         null
       ) : (
