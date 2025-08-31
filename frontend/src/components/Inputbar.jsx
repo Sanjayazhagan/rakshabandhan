@@ -7,6 +7,7 @@ import { useSendMessageMutation, useSendAudioMutation } from "../store";
 function InputBar() {
   const [message, setMessage] = useState("");
   const [listening, setListening] = useState(false);
+  const [volume, setVolume] = useState(0);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const silenceTimeoutRef = useRef(null);
@@ -66,6 +67,10 @@ function InputBar() {
 
         const sum = dataArray.reduce((acc, val) => acc + Math.abs(val - 128), 0);
         const averageAmplitude = sum / dataArray.length;
+
+        const vol = Math.min(averageAmplitude / 50, 1);
+        setVolume(vol);
+
         const silenceThreshold = 10;
 
         if (averageAmplitude < silenceThreshold) {
@@ -139,49 +144,59 @@ function InputBar() {
   }, []);
 
   return (
-    <><div className="fixed w-full flex justify-center bottom-0 left-0 right-0 inset-x-0  ">
-      <div className=" w-full z-10 bg-white rounded-t-3xl pb-5 sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw]">
-        <div className="bg-blue-300 rounded-3xl w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2 flex items-center gap-2 shadow-lg">
-          <form
-            className="flex-grow"
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendMessage(message);
-            }}
-          >
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type here"
-              className="w-full px-3 py-2 rounded-full focus:outline-none text-sm sm:text-base"
-              disabled={listening}
-            />
-          </form>
-
-          {message.trim() ? (
-            <button
-              onClick={() => sendMessage(message)}
-              className="w-12 h-12 md:w-10 md:h-10 bg-green-500 text-white rounded-full hover:bg-green-600 flex items-center justify-center"
+    <>
+      <div className="fixed w-full flex justify-center bottom-0 left-0 right-0 inset-x-0  ">
+        <div className=" w-full z-10 bg-gray-950 rounded-t-3xl pb-5 sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw]">
+          <div className="bg-gray-500 rounded-3xl w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2 flex items-center gap-2 shadow-lg">
+            <form
+              className="flex-grow"
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage(message);
+              }}
             >
-              <FaPaperPlane size={20} />
-            </button>
-          ) : (
-            <button
-              onClick={listening ? stopRecording : startRecording}
-              className="w-12 h-12 md:w-10 md:h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 flex items-center justify-center relative"
-            >
-              {listening ? <FaStop size={20} /> : <FaMicrophone size={20} />}
-            </button>
-          )}
-        </div>
-      </div>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type here"
+                className="w-full px-3 py-2 rounded-full focus:outline-none text-sm sm:text-base"
+                disabled={listening}
+              />
+            </form>
 
-      {listening && (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-64 h-64 md:w-72 md:h-72 rounded-full bg-blue-400 opacity-50 animate-pulse"></div>
+            {message.trim() ? (
+              <button
+                onClick={() => sendMessage(message)}
+                className="w-12 h-12 md:w-10 md:h-10 bg-green-500 text-white rounded-full hover:bg-green-600 flex items-center justify-center"
+              >
+                <FaPaperPlane size={20} />
+              </button>
+            ) : (
+              <button
+                onClick={listening ? stopRecording : startRecording}
+                className="w-12 h-12 md:w-10 md:h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 flex items-center justify-center relative"
+              >
+                {listening ? <FaStop size={20} /> : <FaMicrophone size={20} />}
+              </button>
+            )}
+          </div>
         </div>
-      )}
+
+        {listening && (
+          <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+            <div
+              className=" w-64 h-64 md:w-72 md:h-72 rounded-full opacity-80 transition-transform duration-100 shadow-2xl"
+              style={{
+                width: "15rem",
+                height: "15rem",
+                transform: `scale(${1 + volume * 1.5})`,
+                background: "radial-gradient(circle at center, #3b82f6, #1e3a8a)"
+              }}
+            ></div>
+          </div>
+        )}
       </div>
     </>
   );
