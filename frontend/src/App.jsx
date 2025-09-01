@@ -2,6 +2,8 @@ import ChatWindow from "./components/Chatwindow";
 import InputBar from "./components/Inputbar";
 import Homepage from "./components/Homepage";
 import Sidebar from "./components/Sidebar";
+import TypingIndicator from "./Typinganimation";
+import BlueRingLoader from "./Blueringloader";
 import { useFetchChatQuery,useFetchNewGroupQuery,useFetchUserGroupsQuery } from "./store";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState,useEffect, use } from "react";
@@ -10,6 +12,8 @@ import { user } from "elevenlabs/api";
 function App() {
   const { data: newGroupData,isLoading: isNewGroupLoading } = useFetchNewGroupQuery(1);
 
+
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [groupId, setGroupId] = useState(1);
   const { data: userGroupsData, isLoading: isUserGroupsLoading, error:gerror } = useFetchUserGroupsQuery(1);
   const { data, isLoading, error } = useFetchChatQuery(groupId)
@@ -92,7 +96,7 @@ function App() {
             x: isSidebarOpen ? 250 : 0,
           }}
           transition={{ duration: 0.3 }}
-          className="absolute top-4 z-40 bg-gray-500 text-white rounded-r-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-700"
+          className="sticky  top-4 z-40 bg-gray-500 text-white rounded-r-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-700"
         >
           {isSidebarOpen ? "<" : ">"}
         </motion.button>
@@ -119,7 +123,7 @@ function App() {
               className="flex-1 bg-gray-950 flex justify-center"
             >
               <div className="w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2">
-                <ChatWindow chatData={chatData} />
+                <ChatWindow chatData={chatData} isAudioLoading={isAudioLoading} />
               </div>
             </motion.div>
           )}
@@ -128,6 +132,8 @@ function App() {
         <div className="flex justify-center w-full">
           <div className="z-10 flex">
             <InputBar
+              isAudioLoading={isAudioLoading}
+              setIsAudioLoading={setIsAudioLoading}
               onSendMessage={handleAddMessage}
               groupId={groupId}
               onAnswerUpdate={handleAnswerUpdate}
