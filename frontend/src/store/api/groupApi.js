@@ -6,13 +6,10 @@ const groupApi = createApi({
   endpoints(builder){
     return{
         fetchNewGroup: builder.query({
-        query: (user) => {
+        query: (id) => {
           return {
-            url: '/groups',
-            params: {
-              userId: user.id,
-            },
-            method: 'GET',
+            url: `/users/${id}`,
+            method: 'POST',
           };
         },
       }),
@@ -24,9 +21,17 @@ const groupApi = createApi({
           };
         },
       }),
-    }
-  }
+      fetchUserGroups: builder.query({
+        query: (userId) => {
+          return {
+            url: `/user/${userId}`,
+            method: 'GET',
+          };
+        },
+      }),
+    };
+  },
 });
 
-export const { useFetchNewGroupQuery, useFetchChatQuery } = groupApi;
+export const { useFetchNewGroupQuery, useFetchChatQuery, useFetchUserGroupsQuery } = groupApi;
 export { groupApi };
