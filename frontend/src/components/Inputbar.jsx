@@ -8,6 +8,8 @@ function InputBar() {
   const [message, setMessage] = useState("");
   const [listening, setListening] = useState(false);
   const [volume, setVolume] = useState(0);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const silenceTimeoutRef = useRef(null);
@@ -43,13 +45,16 @@ function InputBar() {
         formData.append("audio", blob, `${Date.now()}.webm`);
         formData.append("groupid", 1); 
         try {
-          console.log("Audio Blob:",formData);
+          console.log("Audio Blob:", formData);
+          setIsAudioLoading(true);
           const response = await sendAudioMutation(formData).unwrap();
-          setMessage('');
-          console.log('Audio message sent:', response.data);
+          setMessage("");
+          console.log("Audio message sent:", response.data);
           await speakText(response.data);
         } catch (err) {
-          console.error('Failed to send audio:', err);
+          console.error("Failed to send audio:", err);
+        } finally {
+          setIsAudioLoading(false);
         }
       };
 
@@ -128,12 +133,15 @@ function InputBar() {
     setMessage("");
     const test = { groupid: 1, prompt: msg };
     try {
+      setIsAudioLoading(true);
       const response = await sendMessageMutation(test).unwrap();
-      setMessage('');
-      console.log('Message sent:', response.data);
+      setMessage("");
+      console.log("Message sent:", response.data);
       await speakText(response.data);
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error("Failed to send message:", err);
+    } finally {
+      setIsAudioLoading(false);
     }
   };
 

@@ -2,6 +2,8 @@ import ChatWindow from "./components/Chatwindow";
 import InputBar from "./components/Inputbar";
 import Homepage from "./components/Homepage";
 import Sidebar from "./components/Sidebar";
+import TypingIndicator from "./Typinganimation";
+import BlueRingLoader from "./Blueringloader";
 import { useFetchChatQuery } from "./store";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
@@ -9,16 +11,22 @@ import { useState } from "react";
 function App() {
   const { data, isLoading, error } = useFetchChatQuery(1);
 
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+
   console.log("Fetched chat data:", data);
 
   const [chatData, setChatData] = useState([
     { question: "Hello", answer: "Hi there!" },
     { question: "How are you?", answer: "I'm good, how about you?" },
+    { question: "What's your favorite color?", answer: "My favorite color is blue." },
+    { question: "What's your favorite food?", answer: "My favorite food is pizza." },
+    { question: "hi", answer: "hlo"}
   ]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [chatLogs, setChatLogs] = useState([
-    { id : 1, title : "Chat 1" },
-    { id : 2, title : "Chat 2" },
+    { id: 1, title: "Chat 1" },
+    { id: 2, title: "Chat 2" },
+    { id: 3, title: "Chat 3" },
 
   ]);
 
@@ -61,7 +69,7 @@ function App() {
             x: isSidebarOpen ? 250 : 0,
           }}
           transition={{ duration: 0.3 }}
-          className="absolute top-4 z-40 bg-gray-500 text-white rounded-r-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-700"
+          className="sticky  top-4 z-40 bg-gray-500 text-white rounded-r-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-700"
         >
           {isSidebarOpen ? "<" : ">"}
         </motion.button>
@@ -88,7 +96,7 @@ function App() {
               className="flex-1 bg-gray-950 flex justify-center"
             >
               <div className="w-full sm:w-[80vw] md:w-[50vw] lg:w-[33.33vw] p-2">
-                <ChatWindow chatData={chatData} />
+                <ChatWindow chatData={chatData} isAudioLoading={isAudioLoading} />
               </div>
             </motion.div>
           )}
@@ -102,6 +110,8 @@ function App() {
                   ? (msg) => setChatData([{ question: msg, answer: "" }])
                   : handleAddMessage
               }
+              isAudioLoading={isAudioLoading}
+              setIsAudioLoading={setIsAudioLoading}
             />
           </div>
         </div>

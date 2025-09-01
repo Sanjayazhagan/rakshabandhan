@@ -12,13 +12,13 @@ export default function Sidebar({ chatLogs, onNewChat }) {
       {/* Chat Logs */}
       <div className="flex-1 overflow-y-auto">
         {chatLogs.length === 0 ? (
-          <p className="text-gray-500">No chats yet</p>
+          <p className="text-white">No chats yet</p>
         ) : (
           <ul className="space-y-2">
             {chatLogs.map((chat) => (
               <li
                 key={chat.id}
-                className="px-3 py-2 bg-gray-600 rounded-md shadow cursor-pointer hover:bg-gray-400"
+                className="px-3 py-2 bg-gray-600 rounded-md shadow cursor-pointer hover:bg-gray-400 text-white"
               >
                 {chat.title}
               </li>
