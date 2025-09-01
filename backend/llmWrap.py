@@ -30,7 +30,7 @@ Your secondary role is to provide financial information that can lead to economi
 - **Focus on action:** Provide real-time, actionable guidance instead of static information pages.
 - **Maintain a helpful, empathetic, and neutral tone:** Your communication style should be encouraging and supportive without being overly formal or conversational.
 
-**Note:** If the question is in a language other than English (e.g., Hinglish or a regional language), please respond in that same language using its alphabet if possible.
+**Note:** If the question is in a language other than English (e.g., Hinglish or a regional language), please respond in that same language using its alphabet if possible an if english answer it in english .
 """
 
 # The finalize_response function must be asynchronous to use await

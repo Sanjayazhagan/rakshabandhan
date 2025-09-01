@@ -1,4 +1,4 @@
-export default function Sidebar({ chatLogs, onNewChat }) {
+export default function Sidebar({ chatLogs, onNewChat , onGroupClick }) {
   return (
     <div className="h-full bg-gray-800 p-4 flex flex-col">
       {/* New Chat Button */}
@@ -18,9 +18,10 @@ export default function Sidebar({ chatLogs, onNewChat }) {
             {chatLogs.map((chat) => (
               <li
                 key={chat.id}
-                className="px-3 py-2 bg-gray-600 rounded-md shadow cursor-pointer hover:bg-gray-400 text-white"
+                className="px-3 py-2 bg-gray-600 rounded-md shadow cursor-pointer hover:bg-gray-400"
+                onClick={() => onGroupClick(chat.id)}
               >
-                {chat.title}
+                {chat.name}
               </li>
             ))}
           </ul>

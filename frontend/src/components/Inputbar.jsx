@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
 import { speakText } from "./ElevenlabsAPI";
 import { useSendMessageMutation, useSendAudioMutation } from "../store";
+import { m } from "framer-motion";
 
 
-function InputBar() {
+function InputBar({ onSendMessage, groupId, onAnswerUpdate, onAddChatLog }) {
   const [message, setMessage] = useState("");
   const [listening, setListening] = useState(false);
   const [volume, setVolume] = useState(0);
@@ -43,13 +44,15 @@ function InputBar() {
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const formData = new FormData();
         formData.append("audio", blob, `${Date.now()}.webm`);
-        formData.append("groupid", 1); 
+        formData.append("groupid", groupId); 
         try {
           console.log("Audio Blob:", formData);
           setIsAudioLoading(true);
           const response = await sendAudioMutation(formData).unwrap();
-          setMessage("");
-          console.log("Audio message sent:", response.data);
+
+          setMessage('');
+          console.log('Audio message sent:', response.data);
+          onAddChatLog({id: groupId,name: response.question});
           await speakText(response.data);
         } catch (err) {
           console.error("Failed to send audio:", err);
@@ -131,18 +134,24 @@ function InputBar() {
   const sendMessage = async (msg) => {
     if (!msg.trim()) return;
     setMessage("");
-    const test = { groupid: 1, prompt: msg };
+    console.log(groupId);
+    const test = { groupid: groupId, prompt: msg };
+    onSendMessage({question: msg, answer: "Loading..."});
+    onAddChatLog({id: groupId,name: msg});
     try {
       setIsAudioLoading(true);
       const response = await sendMessageMutation(test).unwrap();
-      setMessage("");
-      console.log("Message sent:", response.data);
+
+      setMessage('');
+      console.log('Message sent:', response.data);
+      onAnswerUpdate(response.data);
       await speakText(response.data);
     } catch (err) {
       console.error("Failed to send message:", err);
     } finally {
       setIsAudioLoading(false);
     }
+
   };
 
   useEffect(() => {

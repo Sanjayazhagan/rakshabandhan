@@ -10,6 +10,7 @@ from database import SessionLocal, Base, engine
 from model import users, chatgroups, chats
 from sqlalchemy.orm import Session, sessionmaker
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import update
 
 
 origins = [
@@ -60,6 +61,9 @@ def prompt(request: PromptInput, db: Session = Depends(get_db)):
     response = asyncio.run(finalize_response(request.prompt))
     db.add(chats(user_id=1, chatgroup_id=request.groupid, question=request.prompt, answer=response))
     db.commit()
+    smt=update(chatgroups).where(chatgroups.id == request.groupid).values(name=request.prompt)
+    db.execute(smt)
+    db.commit()
     return {"data": response}
 @app.post("/chat/audio")
 async def audio_prompt(
@@ -80,23 +84,37 @@ async def audio_prompt(
     
     db.add(chats(user_id=1, chatgroup_id=groupid, question=question, answer=response))
     db.commit()
-    
-    return {"data": response}
+    smt=update(chatgroups).where(chatgroups.id == groupid).values(name=question)
+    db.execute(smt)
+    return {"question": question, "data": response}
 
 @app.get("/groups/{group_id}")
 def get_group(group_id: int, db: Session = Depends(get_db)):
     group = db.query(chats.question,chats.answer).filter(chats.chatgroup_id == group_id).all()
     dict_group = [ {"question": q, "answer": a} for q, a in group ]
     if not dict_group:
-        return {"error": "Group not found"}
+        return {"data": []}
     return {"data": dict_group}
 
-@app.get("/groups")
-def get_groups(db: Session = Depends(get_db)):
-    groups = db.add(chatgroups(user_id=1))
+@app.post("/users/{userId}")
+def new_groups(userId: int, db: Session = Depends(get_db)):
+    new_group = chatgroups(user_id=userId)
+    db.add(new_group)
     db.commit()
-    db.refresh(groups)
+    db.refresh(new_group)
+    return {"id": new_group.id}
+@app.get("/user/{user_id}")
+def get_groups(user_id: int, db: Session = Depends(get_db)):
+    # Use db.query() to fetch multiple rows based on a filter
+    groups = db.query(chatgroups).filter(
+        chatgroups.user_id == user_id,
+        chatgroups.name != None
+    ).all()
 
-    # The new_group object now has its ID populated
-    new_group_id = groups.id
-    return {"id": new_group_id}
+    # Handle the case where no groups are found
+    if not groups:
+        raise "No groups found for this user"
+
+    # The rest of your code to format the response
+    dict_groups = [{"id": group.id, "name": group.name} for group in groups]
+    return dict_groups
