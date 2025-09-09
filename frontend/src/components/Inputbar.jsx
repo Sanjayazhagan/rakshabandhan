@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { FaMicrophone, FaStop, FaPaperPlane } from "react-icons/fa";
 import { speakText } from "./ElevenlabsAPI";
 import { useSendMessageMutation, useSendAudioMutation } from "../store";
+import TypingIndicator from "./Typinganimation";
 import { m } from "framer-motion";
 
 
@@ -51,8 +52,10 @@ function InputBar({ onSendMessage, groupId, onAnswerUpdate, onAddChatLog }) {
           const response = await sendAudioMutation(formData).unwrap();
 
           setMessage('');
+          onSendMessage({question: "Loading...", answer: "Loading..."});
           console.log('Audio message sent:', response.data);
           onAddChatLog({id: groupId,name: response.question});
+          onSendMessage({question: response.question, answer: response.data});
           await speakText(response.data);
         } catch (err) {
           console.error("Failed to send audio:", err);
