@@ -1,130 +1,64 @@
-"""import bs4
-from langchain import hub
-from langchain_community.document_loaders import WebBaseLoader
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langgraph.graph import START, StateGraph
-from typing_extensions import List, TypedDict
-from vectorStore import vector_store
-from chatmodel import llm
+import os
 import asyncio
-
-from langchain_community.document_loaders import PyPDFLoader
-file_path = "./data/repealedfileopen.pdf"
-loader = PyPDFLoader(file_path)
-pages = []
-async for page in loader.alazy_load():
-    pages.append(page)
-# Load and chunk contents of the blog
-loader = WebBaseLoader(
-    web_paths=("https://lilianweng.github.io/posts/2023-06-23-agent/",),
-    bs_kwargs=dict(
-        parse_only=bs4.SoupStrainer(
-            class_=("post-content", "post-title", "post-header")
-        )
-    ),
-)
-docs = loader.load()
-
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-all_splits = text_splitter.split_documents(docs)
-
-# Index chunks
-_ = vector_store.add_documents(documents=all_splits)
-
-# Define prompt for question-answering
-# N.B. for non-US LangSmith endpoints, you may need to specify
-# api_url="https://api.smith.langchain.com" in hub.pull.
-prompt = hub.pull("rlm/rag-prompt")
-
-
-# Define state for application
-class State(TypedDict):
-    question: str
-    context: List[Document]
-    answer: str
-
-
-# Define application steps
-def retrieve(state: State):
-    retrieved_docs = vector_store.similarity_search(state["question"])
-    return {"context": retrieved_docs}
-
-
-def generate(state: State):
-    docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-    messages = prompt.invoke({"question": state["question"], "context": docs_content})
-    response = llm.invoke(messages)
-    return {"answer": response.content}
-
-
-# Compile application and test
-graph_builder = StateGraph(State).add_sequence([retrieve, generate])
-graph_builder.add_edge(START, "retrieve")
-graph = graph_builder.compile()
-
-response = graph.invoke({"question": "What is Task Decomposition?"})
-print(response["answer"])"""
-import bs4
-from langchain import hub
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langgraph.graph import START, StateGraph
 from typing import List, TypedDict
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_pinecone import PineconeVectorStore
 from langchain_core.documents import Document
-import asyncio
+from langgraph.graph import START, StateGraph
+from langchain import hub
 
-# Assuming these are your custom modules
-# Make sure vectorStore.py has the local embedding model setup.
-from vectorStore import vector_store
-from chatmodel import llm
+# Assuming llm is configured properly in chatmodel.py
+from chatmodel import llm 
 
-# Define state for application
+# 1. Initialize Embeddings (Matches what you used in ingest.py)
+hf_embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+
+# 2. Connect to Pinecone Cloud
+pinecone_api_key = os.getenv("PINECONE_API_KEY")
+if not pinecone_api_key:
+    raise ValueError("PINECONE_API_KEY environment variable is not set. Please check your .env file.")
+
+os.environ["PINECONE_API_KEY"] = pinecone_api_key
+index_name = os.getenv("PINECONE_INDEX_NAME", "rag-schemes-index")
+
+vector_store = PineconeVectorStore(
+    index_name=index_name, 
+    embedding=hf_embeddings
+)
+
+# 3. Define LangGraph State and Nodes
 class State(TypedDict):
     question: str
     context: List[Document]
     answer: str
 
-# Define application steps
 def retrieve(state: State):
+    # Searches Pinecone instead of a local folder
     retrieved_docs = vector_store.similarity_search(state["question"])
     return {"context": retrieved_docs}
 
 def generate(state: State):
     docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-    # N.B. for non-US LangSmith endpoints, you may need to specify
-    # api_url="https://api.smith.langchain.com" in hub.pull.
     prompt = hub.pull("rlm/rag-prompt")
     messages = prompt.invoke({"question": state["question"], "context": docs_content})
     response = llm.invoke(messages)
     return {"answer": response.content}
 
-# --- Document Loading and Processing ---
-async def load_and_process_docs():
-    file_path = "./data/All_Schemes_merged.pdf"
-    loader = PyPDFLoader(file_path)
-    
-    docs = loader.load()
-    
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    all_splits = text_splitter.split_documents(docs)
-    
-    print("Embedding documents...")
-    # This will now use the local embedding model and won't be rate-limited
-    _ = vector_store.add_documents(documents=all_splits)
-    print("All documents have been embedded and indexed.")
+# Compile Application Graph
+graph_builder = StateGraph(State).add_sequence([retrieve, generate])
+graph_builder.add_edge(START, "retrieve")
+graph = graph_builder.compile()
 
-# --- Main execution block ---
-async def rag(prompt):
-    # Compile the application graph
-    graph_builder = StateGraph(State).add_sequence([retrieve, generate])
-    graph_builder.add_edge(START, "retrieve")
-    graph = graph_builder.compile()
-
-    # After loading and indexing, you can now run your graph
-    response = graph.invoke({"question": prompt})
+# 4. EXPORT THE FUNCTION expected by llmWrap.py
+async def rag(prompt: str) -> str:
+    """
+    Takes a string prompt, runs it through the LangGraph RAG pipeline,
+    and returns the string answer.
+    """
+    response = await asyncio.to_thread(graph.invoke, {"question": prompt})
     return response["answer"]
-
-# Run the main async function
-if __name__ == "__main__":
-    asyncio.run(rag("explain the laws for workers to a layman in thanglish language?"))

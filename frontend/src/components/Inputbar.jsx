@@ -145,7 +145,7 @@ function InputBar({ onSendMessage, groupId, onAnswerUpdate, onAddChatLog }) {
       setMessage('');
       console.log('Message sent:', response.data);
       onAnswerUpdate(response.data);
-      await speakText(response.data);
+      //await speakText(response.data);
     } catch (err) {
       console.error("Failed to send message:", err);
     } finally {
